@@ -1,3 +1,35 @@
+import React, { useEffect, useState } from 'react';
+import { createRoot } from 'react-dom/client';
+import { Activity, BrainCircuit, BatteryFull, ShieldAlert, Settings, History, Users, SlidersHorizontal, AlertTriangle, CheckCircle2, Play, Square, Send, Menu, X, RotateCcw, HeartPulse } from 'lucide-react';
+import './style.css';
+import { enablePushNotifications } from './notifications';
+
+type Page = 'dashboard' | 'calibration' | 'history' | 'family' | 'settings';
+type Event = {time:string; message:string; kind:string};
+const labels: Record<Page,string> = {dashboard:'Dashboard',calibration:'Calibration',history:'Activity history',family:'Family view',settings:'Settings'};
+const intentions = ['Grab cup','Move arm left','Move arm right','Release object','Return to home'];
+function Waveform({tick}:{tick:number}) { const points = Array.from({length:130},(_,i)=>{const x=i*5;const y=55+Math.sin(i*.52+tick*.33)*9+Math.sin(i*1.91+tick*.21)*5+(i%29<4?Math.sin(i*2.4+tick)*15:0);return `${x},${y}`}).join(' ');return <svg className="wave" viewBox="0 0 645 110" preserveAspectRatio="none" aria-label="Simulated EEG waveform"><g stroke="#e1eaf2" strokeWidth="1">{[20,55,90].map(y=><line key={y} x1="0" y1={y} x2="645" y2={y}/>)}</g><polyline fill="none" stroke="#20a7b8" strokeWidth="2.4" strokeLinejoin="round" points={points}/></svg> }
+type Pose = {x:number;y:number};
+const HOME:Pose={x:197,y:60};
+const CUP:Pose={x:333,y:151};
+const interpolate=(a:number,b:number,t:number)=>a+(b-a)*t;
+const ease=(t:number)=>{const q=Math.max(0,Math.min(1,t));return q*q*(3-2*q)};
+function motionPose(start:Pose,action:string,progress:number):Pose {
+ const t=ease(progress/100);
+ const target=action==='Grab cup'?CUP:action==='Move arm left'?{x:Math.max(85,start.x-95),y:start.y}:action==='Move arm right'?{x:Math.min(365,start.x+95),y:start.y}:action==='Return to home'?HOME:start;
+ return {x:interpolate(start.x,target.x,t),y:interpolate(start.y,target.y,t)};
+}
+function RobotArm({pose,holding,state,progress,intent}:{pose:Pose;holding:boolean;state:string;progress:number;intent:string}) {
+ const {x,y}=pose;
+ const jointX=interpolate(197,x,.48)-24;
+ const jointY=interpolate(207,y,.48)-35;
+ const fingers=holding?'M-14 0 L-13 22 M14 0 L13 22':'M-14 0 L-27 20 M14 0 L27 20';
+ return <div className="robot-scene"><svg viewBox="0 0 440 270" role="img" aria-label={`Simulated robotic arm ${state}; ${holding?'holding cup':'gripper open'}`}>
+ <defs><linearGradient id="armMetal" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#58c4d0"/><stop offset="1" stopColor="#247fa7"/></linearGradient></defs>
+ <path d="M20 232H420" stroke="#cbd9e6" strokeWidth="3"/>
+ {/* The table is fixed and never conditionally removed. */}
+ <rect x="287" y="209" width="115" height="9" rx="3" fill="#91a9bd"/><rect x="299" y="218" width="8" height="24" fill="#91a9bd"/><rect x="382" y="218" width="8" height="24" fill="#91a9bd"/>
+ <rect x="142" y="222" width="110" height="14" rx="5" fill="#203b5b"/><rect x="171" y="202" width="52" height="24" rx="7" fill="#385a7b"/>
  {/* The cup remains on the table until it is grasped; while held it follows the gripper. */}
  <g transform={`translate(${holding?x:333} ${holding?y+56:207})`}><path d="M-12 -28 L-10 0 H10 L12 -28 Z" fill="#d5e6ef" stroke="#55a1b8" strokeWidth="2.5"/><path d="M-12 -23 H12" stroke="#55a1b8" strokeWidth="2"/></g>
  <path d={`M197 207 L${jointX} ${jointY}`} stroke="url(#armMetal)" strokeWidth="24" strokeLinecap="round"/>
