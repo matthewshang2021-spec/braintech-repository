@@ -1,3 +1,4 @@
+import { createUserProfile } from "./userProfile";
 import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Activity, BrainCircuit, BatteryFull, ShieldAlert, Settings, History, Users, SlidersHorizontal, AlertTriangle, CheckCircle2, Play, Square, Send, Menu, X, RotateCcw, HeartPulse } from 'lucide-react';
