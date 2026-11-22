@@ -25,14 +25,49 @@ export async function enablePushNotifications() {
     throw new Error("Firebase Messaging is not supported.");
   }
 
-  const registration = await navigator.serviceWorker.register(
-    `${import.meta.env.BASE_URL}firebase-messaging-sw.js`
-  );
+ 
+const registration = await navigator.serviceWorker.register(
+  `${import.meta.env.BASE_URL}firebase-messaging-sw.js`
+);
 
-  const token = await getToken(messaging, {
-    vapidKey: VAPID_KEY,
-    serviceWorkerRegistration: registration
-  });
+// Wait until the service worker is active.
+if (!registration.active) {
+  const worker = registration.installing || registration.waiting;
+
+  if (worker) {
+    await new Promise<void>((resolve, reject) => {
+      if (worker.state === "activated") {
+        resolve();
+        return;
+      }
+
+      const timeout = setTimeout(
+        () => reject(new Error("Service worker activation timed out.")),
+        15000
+      );
+
+      worker.addEventListener("statechange", () => {
+        if (worker.state === "activated") {
+          clearTimeout(timeout);
+          resolve();
+        } else if (worker.state === "redundant") {
+          clearTimeout(timeout);
+          reject(new Error("Service worker installation failed."));
+        }
+      });
+    });
+  }
+}
+
+if (!registration.active) {
+  throw new Error("Service worker is not active.");
+}
+
+const token = await getToken(messaging, {
+  vapidKey: VAPID_KEY,
+  serviceWorkerRegistration: registration
+});
+
 
   if (!token) {
     throw new Error("Could not generate an FCM token.");
