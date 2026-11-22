@@ -51,7 +51,9 @@ function App(){
   useEffect(() => onAuthStateChanged(auth, setSignedInUser, error => setAuthMessage(error.message)), []);
   const signIn = async () => {
     setAuthBusy(true); setAuthMessage('');
-    try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+    try {
+      const result = await signInWithPopup(auth, new GoogleAuthProvider());
+      await createUserProfile(result.user);}
     catch (error) { setAuthMessage(error instanceof Error ? error.message : 'Sign-in failed.'); }
     finally { setAuthBusy(false); }
   };
